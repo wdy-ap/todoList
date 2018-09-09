@@ -1,6 +1,6 @@
- ![图片1没有显示吗？](/pics/readme1.png)
- ![图片2没有显示吗？](/pics/readme2.png)
- ![图片2没有显示吗？](/pics/readme3.jpg)
+ ![图片1没有显示吗？](/static/pics/readme1.png)
+ ![图片2没有显示吗？](/static/pics/readme2.png)
+ ![图片2没有显示吗？](/static/pics/readme3.jpg)
 ## 功能
 * 点击西瓜出现todo输入框和add按钮，输入框获得焦点；添加完成后变回西瓜
 * 添加、修改、删除todo
