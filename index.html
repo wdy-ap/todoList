@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>todolist</title>
+<style>
+    .none {
+        display: none;
+    }
+
+    .container {
+        display:inline-block;
+        position: relative;
+        border: 1px solid lightgray;
+    }
+
+    .title-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 338px;
+        height: 50px;
+        background: #FFC0CB;
+    }
+
+    .title {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 10px;
+        font-family: "sans-serif";
+        font-size: 17px;
+        color: white;
+    }
+
+    .todolist-container {
+        position: absolute;
+        top: 70px;
+        width: 338px;
+        height: 200px;
+    }
+
+    .todolist-title {
+        position: absolute;
+        top: 50px;
+        width: 338px;
+        height: 20px;
+        background: #FFF0F5;
+        font-size: 12px;
+        color: #D2B48C;
+    }
+
+    .todo-container {
+        width: 338px;
+        height: 40px;
+        position:relative;
+    }
+
+    .complete-button {
+        display: inline-block;
+        height: 11px;
+        width: 11px;
+        border: 1px solid #CDBA96;
+        border-radius: 2px;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        left: 17px;
+    }
+
+    .todo {
+        font-size: 16px;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        left: 45px;
+        color: #333222;
+    }
+
+    .clicked {
+        outline: 1px dashed pink;
+    }
+
+    .add-pic {
+        position: absolute;
+        bottom: 40px;
+        right: 20px;
+        animation: 5s rotation infinite;
+        animation-timing-function: linear;
+    }
+
+    @keyframes rotation {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    .add-todo {
+        width: 338px;
+        height:50px;
+        position: absolute;
+        bottom: 35px;
+        left: 0;
+    }
+
+    .add-input {
+        position: absolute;
+        left: 20px;
+        width: 250px;
+        height: 25px;
+        border-radius: 5px;
+        outline: none;
+    }
+
+    .add-button {
+        position: absolute;
+        left: 290px;
+        height: 25px;
+        border-radius: 5px;
+        font-size: 15px;
+    }
+</style>
+</head>
+<body>
+    <div class='container'>
+        <img class='backgroud-pic' src='/imgs/xg.jpg'>
+        <div class='title-container'>
+            <div class='title'>今天</div>
+        </div>
+        <div class='todolist-title'>&nbsp&nbsp&nbsp&nbsp待办事项</div>
+        <div class='todolist-container'></div>
+        <div class='add-container'>
+            <img src='imgs/小xg.png' class='add-pic'>
+            <div class='add-todo none'>
+                <input class='add-input' type='text' placeholder='准备做什么?'>
+                <input class='add-button' type='button' value='&nbsp+&nbsp'>
+            </div>
+        </div>
+    </div>
+<script>
+    var log = console.log.bind(console)
+
+    var e = selector => document.querySelector(selector)
+    var es = selector => document.querySelectorAll(selector)
+
+    var ajax = function(method, path, data, callback) {
+        var r = new XMLHttpRequest()
+        r.open(method, path, true)
+        r.setRequestHeader('Content-Type', 'application/json')
+        r.onreadystatechange = () => {
+            if (r.readyState === 4) {
+                callback(r.response)
+            }
+        }
+        if (method === 'POST') {
+            var data = JSON.stringify(data)
+        }
+        r.send(data)
+    }
+
+    // todo模板html
+    var templateTodo = (id, todo) => {
+        return `
+        <div class='todo-container' data-index=${id}>
+            <span class='complete-button'></span>
+            <span class='todo'>${todo}</span>
+        </div>
+        `
+    }
+
+    // 将todo渲染在页面中
+    var insertTodo = (id, todo) => {
+        var todoHtml = templateTodo(id, todo)
+        var todolistContainer = e('.todolist-container')
+        todolistContainer.insertAdjacentHTML('beforeend', todoHtml)
+    }
+
+    // 获取服务器的todoList，将所有todo都渲染在页面中
+    var insertAll = () => {
+        var path = '/todo/all'
+        ajax('GET', path, '', (data) => {
+            var todoList = JSON.parse(data)
+            for (var i = 0; i < todoList.length; i++) {
+                var id = todoList[i].id
+                var todo = todoList[i].task
+                insertTodo(id, todo)
+            }
+        })
+    }
+
+    // 切换出现在界面上的西瓜图标和input,清空input的值
+    var addChange = () => {
+        var addPic = e('.add-pic')
+        var addTodo = e('.add-todo')
+        var addInput = e('.add-input')
+        addTodo.classList.toggle('none')
+        addPic.classList.toggle('none')
+        addInput.value = ''
+    }
+
+    // 为西瓜图标绑定事件，点击后西瓜消失，输入界面出现，input获得焦点
+    var bindPic = () => {
+        var addPic = e('.add-pic')
+        var addInput = e('.add-input')
+        addPic.addEventListener('click', () => {
+            addChange()
+            addInput.focus()
+        })
+    }
+
+    // 获取input的值，添加到/todo/all，经过服务器处理（增加id）后返回，用该值和id将todo渲染在页面中
+    var addTodo = () => {
+        var addInput = e('.add-input')
+        var todo = addInput.value
+        var path = '/todo/add'
+        var data = {
+            task: todo
+        }
+        ajax('POST', path, data, function(data) {
+            var data = JSON.parse(data)
+            var id = data.id
+            insertTodo(id, todo)
+        })
+    }
+
+    // 为增加按钮绑定事件，点击后执行addTodo，西瓜重新回到界面
+    var bindAdd = () => {
+        var addButton = e('.add-button')
+        addButton.addEventListener('click', () => {
+            addTodo()
+            addChange()
+        })
+    }
+
+    // 获取“被点击完成”的元素的id，通过动态路由，使服务器删除todoList中对应的todo，并且在页面中移除该元素
+    var deleteTodo = data => {
+        var id = data.dataset.index
+        var path = `todo/delete/${id}`
+        ajax('GET', path, '', function() {
+            data.remove()
+        })
+    }
+
+    // 利用事件委托给“完成按钮”绑定事件，点击后获取点击元素的父元素，执行deleteTodo
+    var bindComplete = () => {
+        var todolistContainer = e('.todolist-container')
+        todolistContainer.addEventListener('click', () => {
+            var self = event.target
+            if (self.classList.contains('complete-button')) {
+                var todoContainer = self.closest('.todo-container')
+                deleteTodo(todoContainer)
+            }
+        })
+    }
+
+    // 给todo文本绑定点击事件，点击后执行todo变成可编辑文本
+    var bindTodoClick = () => {
+        var todolistContainer = e('.todolist-container')
+        todolistContainer.addEventListener('click', () => {
+            var self = event.target
+            if (self.classList.contains('todo')) {
+                self.setAttribute('contentEditable', 'true')
+                self.focus()
+                self.classList.add('clicked')
+            }
+        })
+    }
+
+    // 获取被编辑的todo的序号和文本，更新到服务器
+    var editTodo = data => {
+        var todo = data.innerHTML
+        var todoContainer = data.closest('.todo-container')
+        var id = Number(todoContainer.dataset.index)
+        var data = {
+            id,
+            todo
+        }
+        var path = '/todo/edit'
+        ajax('POST', path, data, () => {
+        })
+    }
+
+    // 给给todo文本绑定失去焦点事件，事件执行后拿到修改之后的todo，执行editTodo
+    var bindTodoEdit = () => {
+        var todolistContainer = e('.todolist-container')
+        todolistContainer.addEventListener('focusout', () => {
+            var self = event.target
+            if (self.classList.contains('todo')) {
+                editTodo(self)
+                self.classList.remove('clicked')
+            }
+        })
+    }
+
+    var binds = () => {
+        bindPic()
+        bindAdd()
+        bindComplete()
+        bindTodoClick()
+        bindTodoEdit()
+    }
+
+    var _main = () => {
+        insertAll()
+        binds()
+    }
+
+    _main()
+</script>
+</body>
+</html>
